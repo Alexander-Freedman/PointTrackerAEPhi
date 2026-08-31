@@ -566,7 +566,7 @@
       row.className = "log-entry";
       const text = document.createElement("div");
       text.className = "log-text";
-      text.innerHTML = `<span class="log-activity">${escapeHtml(entry.label)} (${entry.pts > 0 ? "+" : ""}${entry.pts})</span>` +
+      text.innerHTML = `<span class="log-activity">${escapeHtml(entry.label)}</span>` +
         (entry.note ? `<div class="log-note">${escapeHtml(entry.note)}</div>` : "");
       const removeBtn = document.createElement("button");
       removeBtn.className = "log-remove";
