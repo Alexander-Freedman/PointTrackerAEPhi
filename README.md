@@ -97,10 +97,16 @@ this object.
   = +2, etc).
 - Each category has its own progress bar (current / target), plus an
   overall "X / 30 pearls" bar at the top.
+- Tapping a point button opens a small popup with an optional note field
+  (e.g. "Fall retreat" or "with Sarah") before it saves — useful for
+  remembering which specific event a point was for.
+- Under each category's progress bar is a running list of everything
+  logged there: the activity, points, and note. Tap the × next to an
+  entry to remove it (this is also how you correct a misclick — there's
+  no separate "-1" button anymore).
 - A "Miscellaneous" section covers non-category points (announcing,
   tabling, banner painting, etc.) that count toward the 30 total but
-  don't belong to a specific pearl category.
-- A `-1` button on each category corrects mistakes.
+  don't belong to a specific pearl category, with its own log list.
 - Updates sync live — if a sister edits her pearls on her phone, anyone
   else with her login loaded sees the change without refreshing.
 - The browser remembers your last login (localStorage), so you don't
@@ -125,3 +131,8 @@ people clicking buttons occasionally won't come close to the limit.
   care about keeping.
 - **Two people, same name** — they'll only collide if they also share a
   birthday; otherwise each name+birthday pair gets its own record.
+- **Someone's totals look reset** — this version switched from one running
+  number per category to a list of individual logged entries. Existing
+  records are auto-migrated the first time they're loaded (their old
+  total becomes one "Imported total" entry per category), so nothing is
+  lost — but it will look different from before.

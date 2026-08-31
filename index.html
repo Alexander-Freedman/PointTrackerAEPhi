@@ -151,12 +151,77 @@
     line-height: 1.25;
   }
   .buttons button:active { background: var(--track); }
-  .buttons button.minus {
-    flex: 0 0 auto;
-    color: var(--muted);
-    font-weight: 700;
-    padding: 8px 14px;
+
+  .log-list { margin-top: 10px; }
+  .log-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 0;
+    border-top: 1px solid var(--track);
+    font-size: 0.78rem;
   }
+  .log-entry .log-text { flex: 1; }
+  .log-entry .log-activity { font-weight: 600; }
+  .log-entry .log-note { color: var(--muted); }
+  .log-entry .log-remove {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 4px;
+    flex: 0 0 auto;
+  }
+  .log-empty { font-size: 0.75rem; color: var(--muted); font-style: italic; padding: 6px 0 0; }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(43, 26, 36, 0.5);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 10;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 20px;
+    width: 100%;
+    max-width: 380px;
+  }
+  .modal-box .modal-activity { font-weight: 600; margin-bottom: 10px; }
+  .modal-box textarea {
+    width: 100%;
+    min-height: 70px;
+    padding: 10px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    border: 1px solid var(--track);
+    border-radius: 10px;
+    resize: vertical;
+    box-sizing: border-box;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .modal-actions button {
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border: 1px solid var(--track);
+  }
+  .modal-actions .cancel-btn { background: #fff; color: var(--muted); }
+  .modal-actions .confirm-btn { background: var(--pink); color: #fff; border: none; }
 
   .misc-section {
     background: var(--card);
@@ -216,6 +281,7 @@
       <h2>Miscellaneous (counts toward total only)</h2>
       <div class="hint">Announcing, tabling, banner painting, etc. Not tied to a specific category.</div>
       <div class="buttons" id="miscButtons"></div>
+      <div class="log-list" id="log-misc"></div>
     </div>
   </div>
 
@@ -223,10 +289,21 @@
   <div class="footer-credit">made by Alexander Freedman</div>
 </div>
 
+<div class="modal-overlay" id="noteModal">
+  <div class="modal-box">
+    <div class="modal-activity" id="modalActivityLabel"></div>
+    <textarea id="modalNote" placeholder="Add a note for yourself (optional) — e.g. which event, who with, etc."></textarea>
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="cancelEntry()">Cancel</button>
+      <button class="confirm-btn" onclick="confirmEntry()">Add</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import {
-    getFirestore, doc, getDoc, setDoc, onSnapshot, increment
+    getFirestore, doc, getDoc, setDoc, onSnapshot, arrayUnion, arrayRemove
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -307,6 +384,24 @@
     return `${sanitizeName(name)}_${birthday}`;
   }
 
+  function newId() {
+    return (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
+  }
+
+  // Older docs stored one running number per category instead of a log of
+  // individual entries. Convert those numbers into a single "Imported total"
+  // entry per category so nobody loses pearls when this update rolls out.
+  async function migrateIfNeeded(ref, data) {
+    if (Array.isArray(data.log)) return;
+    const log = [];
+    CATEGORIES.forEach(c => {
+      const v = data[c.id];
+      if (v) log.push({ id: newId(), category: c.id, label: "Imported total", pts: v, note: "", ts: Date.now() });
+    });
+    if (data.misc) log.push({ id: newId(), category: "misc", label: "Imported total", pts: data.misc, note: "", ts: Date.now() });
+    await setDoc(ref, { log }, { merge: true });
+  }
+
   window.loadUser = async function (fromSaved) {
     const nameRaw = document.getElementById("nameInput").value;
     const birthday = document.getElementById("birthdayInput").value;
@@ -332,10 +427,9 @@
     const ref = doc(db, "counters", currentDocId);
     const snap = await getDoc(ref);
     if (!snap.exists()) {
-      const blank = {};
-      CATEGORIES.forEach(c => blank[c.id] = 0);
-      blank.misc = 0;
-      await setDoc(ref, blank);
+      await setDoc(ref, { log: [] });
+    } else {
+      await migrateIfNeeded(ref, snap.data());
     }
 
     if (unsubscribe) unsubscribe();
@@ -383,6 +477,7 @@
         </div>
         <div class="bar cat-bar"><div class="bar-fill" id="bar-${cat.id}" style="width:0%"></div></div>
         <div class="buttons" id="buttons-${cat.id}"></div>
+        <div class="log-list" id="log-${cat.id}"></div>
       `;
       container.appendChild(card);
 
@@ -390,14 +485,9 @@
       cat.activities.forEach(act => {
         const b = document.createElement("button");
         b.textContent = act.label;
-        b.onclick = () => addPoints(cat.id, act.pts);
+        b.onclick = () => openNoteModal(cat.id, act.pts, act.label);
         btnRow.appendChild(b);
       });
-      const minus = document.createElement("button");
-      minus.textContent = "-1";
-      minus.className = "minus";
-      minus.onclick = () => addPoints(cat.id, -1);
-      btnRow.appendChild(minus);
     });
   }
 
@@ -407,42 +497,116 @@
     MISC_ACTIVITIES.forEach(act => {
       const b = document.createElement("button");
       b.textContent = act.label;
-      b.onclick = () => addPoints("misc", act.pts);
+      b.onclick = () => openNoteModal("misc", act.pts, act.label);
       row.appendChild(b);
     });
-    const minus = document.createElement("button");
-    minus.textContent = "-1";
-    minus.className = "minus";
-    minus.onclick = () => addPoints("misc", -1);
-    row.appendChild(minus);
   }
 
-  async function addPoints(fieldId, pts) {
-    if (!currentDocId) return;
-    const ref = doc(db, "counters", currentDocId);
+  let pendingEntry = null;
+
+  window.openNoteModal = function (category, pts, label) {
+    pendingEntry = { category, pts, label };
+    document.getElementById("modalActivityLabel").textContent = label;
+    document.getElementById("modalNote").value = "";
+    document.getElementById("noteModal").classList.add("open");
+    document.getElementById("modalNote").focus();
+  };
+
+  window.cancelEntry = function () {
+    pendingEntry = null;
+    document.getElementById("noteModal").classList.remove("open");
+  };
+
+  window.confirmEntry = async function () {
+    if (!pendingEntry || !currentDocId) return;
+    const note = document.getElementById("modalNote").value.trim();
+    const entry = {
+      id: newId(),
+      category: pendingEntry.category,
+      label: pendingEntry.label,
+      pts: pendingEntry.pts,
+      note,
+      ts: Date.now()
+    };
+    document.getElementById("noteModal").classList.remove("open");
+    pendingEntry = null;
     setStatus("Saving...");
+    const ref = doc(db, "counters", currentDocId);
     try {
-      await setDoc(ref, { [fieldId]: increment(pts) }, { merge: true });
+      await setDoc(ref, { log: arrayUnion(entry) }, { merge: true });
     } catch (err) {
       setStatus("Save failed — check your Firebase config / rules");
       console.error(err);
     }
+  };
+
+  window.removeEntry = async function (entry) {
+    if (!currentDocId) return;
+    setStatus("Removing...");
+    const ref = doc(db, "counters", currentDocId);
+    try {
+      await setDoc(ref, { log: arrayRemove(entry) }, { merge: true });
+    } catch (err) {
+      setStatus("Remove failed — check your Firebase config / rules");
+      console.error(err);
+    }
+  };
+
+  function renderLogList(container, entries) {
+    container.innerHTML = "";
+    if (!entries.length) {
+      const empty = document.createElement("div");
+      empty.className = "log-empty";
+      empty.textContent = "Nothing logged yet.";
+      container.appendChild(empty);
+      return;
+    }
+    entries.slice().sort((a, b) => b.ts - a.ts).forEach(entry => {
+      const row = document.createElement("div");
+      row.className = "log-entry";
+      const text = document.createElement("div");
+      text.className = "log-text";
+      text.innerHTML = `<span class="log-activity">${escapeHtml(entry.label)} (${entry.pts > 0 ? "+" : ""}${entry.pts})</span>` +
+        (entry.note ? `<div class="log-note">${escapeHtml(entry.note)}</div>` : "");
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "log-remove";
+      removeBtn.textContent = "×";
+      removeBtn.title = "Remove this entry";
+      removeBtn.onclick = () => removeEntry(entry);
+      row.appendChild(text);
+      row.appendChild(removeBtn);
+      container.appendChild(row);
+    });
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
   }
 
   function render(data) {
+    const log = Array.isArray(data.log) ? data.log : [];
     let total = 0;
+
     CATEGORIES.forEach(cat => {
-      const val = Math.max(0, data[cat.id] || 0);
+      const entries = log.filter(e => e.category === cat.id);
+      const val = entries.reduce((s, e) => s + e.pts, 0);
       total += val;
-      const pct = Math.min(100, (val / cat.target) * 100);
+      const pct = Math.min(100, Math.max(0, (val / cat.target) * 100));
       document.getElementById(`bar-${cat.id}`).style.width = pct + "%";
       const countEl = document.getElementById(`count-${cat.id}`);
       countEl.textContent = `${val} / ${cat.target}`;
       countEl.classList.toggle("complete", val >= cat.target);
+      renderLogList(document.getElementById(`log-${cat.id}`), entries);
     });
-    total += Math.max(0, data.misc || 0);
 
-    const overallPct = Math.min(100, (total / TOTAL_TARGET) * 100);
+    const miscEntries = log.filter(e => e.category === "misc");
+    const miscVal = miscEntries.reduce((s, e) => s + e.pts, 0);
+    total += miscVal;
+    renderLogList(document.getElementById("log-misc"), miscEntries);
+
+    const overallPct = Math.min(100, Math.max(0, (total / TOTAL_TARGET) * 100));
     document.getElementById("overallBar").style.width = overallPct + "%";
     document.getElementById("overallBar").classList.toggle("complete", total >= TOTAL_TARGET);
     document.getElementById("overallCount").textContent = `${total} / ${TOTAL_TARGET}`;
