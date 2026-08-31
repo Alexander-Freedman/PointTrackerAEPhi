@@ -46,6 +46,20 @@
     border: 1px solid var(--track);
     border-radius: 10px;
     margin: 12px 0;
+    box-sizing: border-box;
+  }
+  #loginCard .field-label {
+    text-align: left;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin: 10px 0 4px;
+  }
+  #loginCard input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 44px;
+    line-height: 1.2;
+    margin-top: 0;
   }
   #loginCard button, .switch-user {
     background: var(--pink);
@@ -172,6 +186,7 @@
   <div id="loginCard">
     <div style="font-weight:600;">Log in</div>
     <input id="nameInput" type="text" placeholder="Full Name" autocomplete="off">
+    <div class="field-label">Birthday</div>
     <input id="birthdayInput" type="date" autocomplete="off">
     <button onclick="loadUser()">View / Start My Pearls</button>
     <div style="font-size:0.75rem; color:#8a7482; margin-top:10px;">
