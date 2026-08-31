@@ -207,16 +207,14 @@
     getFirestore, doc, getDoc, setDoc, onSnapshot, increment
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
-  // ---- PASTE YOUR FIREBASE CONFIG HERE (see README.md) ----
   const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyAzVEiWLn-_ori39TpCmM8nsE38xDl6vGs",
+    authDomain: "pointtrackeraephi.firebaseapp.com",
+    projectId: "pointtrackeraephi",
+    storageBucket: "pointtrackeraephi.firebasestorage.app",
+    messagingSenderId: "177490657610",
+    appId: "1:177490657610:web:1fdfc48ba84983b5cc41b3"
   };
-  // -----------------------------------------------------------
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
