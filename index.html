@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AEPhi CO26 Pearl Tracker</title>
+<style>
+  :root {
+    --pink: #e91e8c;
+    --pink-dark: #b8156b;
+    --bg: #fdf3f8;
+    --card: #ffffff;
+    --text: #2b1a24;
+    --muted: #8a7482;
+    --track: #f2dfeb;
+    --good: #34a853;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 16px;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 {
+    font-size: 1.4rem;
+    text-align: center;
+    margin: 8px 0 4px;
+    color: var(--pink-dark);
+  }
+  .sub { text-align: center; color: var(--muted); font-size: 0.85rem; margin-bottom: 20px; }
+
+  #loginCard {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    text-align: center;
+  }
+  #loginCard input {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 1rem;
+    border: 1px solid var(--track);
+    border-radius: 10px;
+    margin: 12px 0;
+  }
+  #loginCard button, .switch-user {
+    background: var(--pink);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 1rem;
+    cursor: pointer;
+    width: 100%;
+  }
+  #loginCard button:active { background: var(--pink-dark); }
+
+  #app { display: none; }
+
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .header-row .name { font-weight: 600; font-size: 1.1rem; }
+  .header-row button {
+    background: none;
+    border: 1px solid var(--track);
+    color: var(--muted);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+
+  .overall {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  }
+  .overall .label {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .bar {
+    height: 12px;
+    background: var(--track);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--pink), var(--pink-dark));
+    border-radius: 6px;
+    transition: width 0.3s ease;
+  }
+  .overall .bar-fill.complete { background: var(--good); }
+
+  .category {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  }
+  .cat-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .cat-name { font-weight: 600; font-size: 0.95rem; }
+  .cat-count { font-size: 0.85rem; color: var(--muted); }
+  .cat-count.complete { color: var(--good); font-weight: 600; }
+  .cat-bar { height: 8px; margin-bottom: 10px; }
+  .buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+  .buttons button {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 1px solid var(--track);
+    background: #fff8fb;
+    color: var(--pink-dark);
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    text-align: center;
+    line-height: 1.25;
+  }
+  .buttons button:active { background: var(--track); }
+  .buttons button.minus {
+    flex: 0 0 auto;
+    color: var(--muted);
+    font-weight: 700;
+    padding: 8px 14px;
+  }
+
+  .misc-section {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-top: 18px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  }
+  .misc-section h2 {
+    font-size: 0.95rem;
+    margin: 0 0 4px;
+  }
+  .misc-section .hint {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  #status { text-align: center; font-size: 0.8rem; color: var(--muted); margin-top: 20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>AEPhi CO26 Pearl Tracker</h1>
+  <div class="sub">Fall 2026 &middot; not official, just for tracking</div>
+
+  <div id="loginCard">
+    <div style="font-weight:600;">Enter your name</div>
+    <input id="nameInput" type="text" placeholder="e.g. Jamie Smith" autocomplete="off">
+    <button onclick="loadUser()">View / Start My Pearls</button>
+  </div>
+
+  <div id="app">
+    <div class="header-row">
+      <div class="name" id="displayName"></div>
+      <button onclick="switchUser()">Switch User</button>
+    </div>
+
+    <div class="overall">
+      <div class="label">
+        <span>Total Pearls</span>
+        <span id="overallCount">0 / 30</span>
+      </div>
+      <div class="bar"><div class="bar-fill" id="overallBar" style="width:0%"></div></div>
+    </div>
+
+    <div id="categories"></div>
+
+    <div class="misc-section">
+      <h2>Miscellaneous (counts toward total only)</h2>
+      <div class="hint">Announcing, tabling, banner painting, etc. Not tied to a specific category.</div>
+      <div class="buttons" id="miscButtons"></div>
+    </div>
+  </div>
+
+  <div id="status"></div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import {
+    getFirestore, doc, getDoc, setDoc, onSnapshot, increment
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+  // ---- PASTE YOUR FIREBASE CONFIG HERE (see README.md) ----
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+  // -----------------------------------------------------------
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // CO26 category targets + point-earning activities, from Fall 2026 Points Breakdown
+  const CATEGORIES = [
+    { id: "sisterhood", label: "Sisterhood", target: 6, activities: [
+      { label: "Sisterhood Event (+2)", pts: 2 },
+      { label: "Study Hours, 30min (+1)", pts: 1 }
+    ]},
+    { id: "secondAve", label: "2nd Aves", target: 3, activities: [
+      { label: "Attend 2nd Ave (+1)", pts: 1 },
+      { label: "Lead a 2nd Ave (+2)", pts: 2 }
+    ]},
+    { id: "pan", label: "Panhellenic", target: 4, activities: [
+      { label: "Play Intramural (+2)", pts: 2 },
+      { label: "Watch Intramural (+1)", pts: 1 },
+      { label: "Pan Chapter Social (+1)", pts: 1 },
+      { label: "Pan Sponsored Event (+1)", pts: 1 }
+    ]},
+    { id: "philanthropy", label: "Philanthropy", target: 4, activities: [
+      { label: "Attend Philanthropy Event (+1)", pts: 1 },
+      { label: "Participate in Philanthropy Event (+2)", pts: 2 }
+    ]},
+    { id: "service", label: "Service", target: 1, activities: [
+      { label: "AEPhi Service Event (+1)", pts: 1 }
+    ]},
+    { id: "wellness", label: "Wellness", target: 2, activities: [
+      { label: "Wellness Event (+1)", pts: 1 }
+    ]},
+    { id: "soberSister", label: "Sober Sister", target: 2, activities: [
+      { label: "Sober Sister at Event (+1)", pts: 1 }
+    ]},
+    { id: "social", label: "Social", target: 5, activities: [
+      { label: "Fraternity Social, 1hr (+1)", pts: 1 },
+      { label: "Sober Social, 1hr (+1)", pts: 1 },
+      { label: "Tailgate w/ Pair, 30min (+1)", pts: 1 }
+    ]},
+    { id: "academic", label: "Academic", target: 2, activities: [
+      { label: "Send in a Grade (+1)", pts: 1 }
+    ]},
+    { id: "involvement", label: "External Involvement", target: 1, activities: [
+      { label: "Involvement Event (+1)", pts: 1 }
+    ]}
+  ];
+
+  const MISC_ACTIVITIES = [
+    { label: "Announcing / day (+1)", pts: 1 },
+    { label: "Tabling shift (+1)", pts: 1 },
+    { label: "Philanthropy Practice (+1)", pts: 1 },
+    { label: "Banner Painting (+1)", pts: 1 },
+    { label: "Event Setup/Cleanup (+1)", pts: 1 },
+    { label: "COB Coffee Chat (+1)", pts: 1 }
+  ];
+
+  const TOTAL_TARGET = CATEGORIES.reduce((s, c) => s + c.target, 0); // 30
+
+  let currentDocId = null;
+  let unsubscribe = null;
+
+  function sanitizeName(raw) {
+    return raw.trim().toLowerCase().replace(/\s+/g, " ");
+  }
+
+  window.loadUser = async function () {
+    const raw = document.getElementById("nameInput").value;
+    const clean = sanitizeName(raw);
+    if (!clean) return;
+
+    currentDocId = clean;
+    document.getElementById("displayName").textContent = raw.trim();
+    document.getElementById("loginCard").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    setStatus("Loading...");
+
+    buildCategoryUI();
+    buildMiscUI();
+
+    const ref = doc(db, "counters", currentDocId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      const blank = {};
+      CATEGORIES.forEach(c => blank[c.id] = 0);
+      blank.misc = 0;
+      await setDoc(ref, blank);
+    }
+
+    if (unsubscribe) unsubscribe();
+    unsubscribe = onSnapshot(ref, (docSnap) => {
+      render(docSnap.data() || {});
+      setStatus("Synced");
+    }, (err) => {
+      setStatus("Connection error — check your Firebase config in index.html");
+      console.error(err);
+    });
+  };
+
+  window.switchUser = function () {
+    if (unsubscribe) unsubscribe();
+    currentDocId = null;
+    document.getElementById("app").style.display = "none";
+    document.getElementById("loginCard").style.display = "block";
+    document.getElementById("nameInput").value = "";
+    setStatus("");
+  };
+
+  function buildCategoryUI() {
+    const container = document.getElementById("categories");
+    container.innerHTML = "";
+    CATEGORIES.forEach(cat => {
+      const card = document.createElement("div");
+      card.className = "category";
+      card.innerHTML = `
+        <div class="cat-top">
+          <div class="cat-name">${cat.label}</div>
+          <div class="cat-count" id="count-${cat.id}">0 / ${cat.target}</div>
+        </div>
+        <div class="bar cat-bar"><div class="bar-fill" id="bar-${cat.id}" style="width:0%"></div></div>
+        <div class="buttons" id="buttons-${cat.id}"></div>
+      `;
+      container.appendChild(card);
+
+      const btnRow = card.querySelector(`#buttons-${cat.id}`);
+      cat.activities.forEach(act => {
+        const b = document.createElement("button");
+        b.textContent = act.label;
+        b.onclick = () => addPoints(cat.id, act.pts);
+        btnRow.appendChild(b);
+      });
+      const minus = document.createElement("button");
+      minus.textContent = "-1";
+      minus.className = "minus";
+      minus.onclick = () => addPoints(cat.id, -1);
+      btnRow.appendChild(minus);
+    });
+  }
+
+  function buildMiscUI() {
+    const row = document.getElementById("miscButtons");
+    row.innerHTML = "";
+    MISC_ACTIVITIES.forEach(act => {
+      const b = document.createElement("button");
+      b.textContent = act.label;
+      b.onclick = () => addPoints("misc", act.pts);
+      row.appendChild(b);
+    });
+    const minus = document.createElement("button");
+    minus.textContent = "-1";
+    minus.className = "minus";
+    minus.onclick = () => addPoints("misc", -1);
+    row.appendChild(minus);
+  }
+
+  async function addPoints(fieldId, pts) {
+    if (!currentDocId) return;
+    const ref = doc(db, "counters", currentDocId);
+    setStatus("Saving...");
+    try {
+      await setDoc(ref, { [fieldId]: increment(pts) }, { merge: true });
+    } catch (err) {
+      setStatus("Save failed — check your Firebase config / rules");
+      console.error(err);
+    }
+  }
+
+  function render(data) {
+    let total = 0;
+    CATEGORIES.forEach(cat => {
+      const val = Math.max(0, data[cat.id] || 0);
+      total += val;
+      const pct = Math.min(100, (val / cat.target) * 100);
+      document.getElementById(`bar-${cat.id}`).style.width = pct + "%";
+      const countEl = document.getElementById(`count-${cat.id}`);
+      countEl.textContent = `${val} / ${cat.target}`;
+      countEl.classList.toggle("complete", val >= cat.target);
+    });
+    total += Math.max(0, data.misc || 0);
+
+    const overallPct = Math.min(100, (total / TOTAL_TARGET) * 100);
+    document.getElementById("overallBar").style.width = overallPct + "%";
+    document.getElementById("overallBar").classList.toggle("complete", total >= TOTAL_TARGET);
+    document.getElementById("overallCount").textContent = `${total} / ${TOTAL_TARGET}`;
+  }
+
+  function setStatus(msg) {
+    document.getElementById("status").textContent = msg;
+  }
+</script>
+</body>
+</html>
