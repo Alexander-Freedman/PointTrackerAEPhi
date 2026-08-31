@@ -1,14 +1,18 @@
 # AEPhi CO26 Pearl Tracker
 
 A single-page web app for tracking Fall 2026 pearl points per CO26 member.
-No login/password — sisters just type their name and the app tracks pearls
-for that name. Data lives in a free Firebase Firestore database so it's
-persistent and shared across everyone's phones/laptops.
+No password — sisters log in with their full name and birthday, which
+together identify their counter. Data lives in a free Firebase Firestore
+database so it's persistent and shared across everyone's phones/laptops.
+The browser remembers the login (via localStorage), so returning to the
+page on the same device logs you back in automatically — "Switch User"
+clears it and returns to the login screen.
 
-**Nothing about this is secure or authenticated.** Anyone who knows (or
-guesses) a name can edit that person's counter. That's intentional per the
-request — this is for casual internal tracking, not anything official or
-sensitive.
+**Nothing about this is secure or authenticated.** Full name + birthday is
+just enough to avoid two people accidentally sharing one counter and to
+not be trivially guessable — anyone who actually knows both can still edit
+that person's counter. That's intentional per the request — this is for
+casual internal tracking, not anything official or sensitive.
 
 ## What's in here
 

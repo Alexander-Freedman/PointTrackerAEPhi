@@ -170,9 +170,13 @@
   <div class="sub">Fall 2026 &middot; not official, just for tracking</div>
 
   <div id="loginCard">
-    <div style="font-weight:600;">Enter your name</div>
-    <input id="nameInput" type="text" placeholder="e.g. Jamie Smith" autocomplete="off">
+    <div style="font-weight:600;">Log in</div>
+    <input id="nameInput" type="text" placeholder="Full Name" autocomplete="off">
+    <input id="birthdayInput" type="date" autocomplete="off">
     <button onclick="loadUser()">View / Start My Pearls</button>
+    <div style="font-size:0.75rem; color:#8a7482; margin-top:10px;">
+      Remembers you on this device. Use "Switch User" to log in as someone else.
+    </div>
   </div>
 
   <div id="app">
@@ -275,20 +279,34 @@
   let currentDocId = null;
   let unsubscribe = null;
 
+  const LOGIN_KEY = "aephiPearlLogin";
+
   function sanitizeName(raw) {
     return raw.trim().toLowerCase().replace(/\s+/g, " ");
   }
 
-  window.loadUser = async function () {
-    const raw = document.getElementById("nameInput").value;
-    const clean = sanitizeName(raw);
-    if (!clean) return;
+  function makeDocId(name, birthday) {
+    return `${sanitizeName(name)}_${birthday}`;
+  }
 
-    currentDocId = clean;
-    document.getElementById("displayName").textContent = raw.trim();
+  window.loadUser = async function (fromSaved) {
+    const nameRaw = document.getElementById("nameInput").value;
+    const birthday = document.getElementById("birthdayInput").value;
+    const nameClean = sanitizeName(nameRaw);
+    if (!nameClean || !birthday) {
+      if (!fromSaved) setStatus("Enter both your full name and birthday.");
+      return;
+    }
+
+    currentDocId = makeDocId(nameRaw, birthday);
+    document.getElementById("displayName").textContent = nameRaw.trim();
     document.getElementById("loginCard").style.display = "none";
     document.getElementById("app").style.display = "block";
     setStatus("Loading...");
+
+    try {
+      localStorage.setItem(LOGIN_KEY, JSON.stringify({ name: nameRaw.trim(), birthday }));
+    } catch (e) { /* storage unavailable, not fatal */ }
 
     buildCategoryUI();
     buildMiscUI();
@@ -318,8 +336,21 @@
     document.getElementById("app").style.display = "none";
     document.getElementById("loginCard").style.display = "block";
     document.getElementById("nameInput").value = "";
+    document.getElementById("birthdayInput").value = "";
+    try { localStorage.removeItem(LOGIN_KEY); } catch (e) { /* ignore */ }
     setStatus("");
   };
+
+  (function tryAutoLogin() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LOGIN_KEY) || "null");
+      if (saved && saved.name && saved.birthday) {
+        document.getElementById("nameInput").value = saved.name;
+        document.getElementById("birthdayInput").value = saved.birthday;
+        window.loadUser(true);
+      }
+    } catch (e) { /* ignore bad/blocked storage */ }
+  })();
 
   function buildCategoryUI() {
     const container = document.getElementById("categories");
