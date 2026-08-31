@@ -411,7 +411,30 @@
       return;
     }
 
-    currentDocId = makeDocId(nameRaw, birthday);
+    const docId = makeDocId(nameRaw, birthday);
+    const ref = doc(db, "counters", docId);
+    setStatus("Checking...");
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+      if (!fromSaved) {
+        const proceed = confirm(
+          `No existing pearls found for "${nameRaw.trim()}" (${birthday}).\n\n` +
+          `Double-check your name and birthday are typed exactly as before — ` +
+          `continuing will create a brand new, empty account.\n\n` +
+          `Create a new account?`
+        );
+        if (!proceed) {
+          setStatus("");
+          return;
+        }
+      }
+      await setDoc(ref, { log: [] });
+    } else {
+      await migrateIfNeeded(ref, snap.data());
+    }
+
+    currentDocId = docId;
     document.getElementById("displayName").textContent = nameRaw.trim();
     document.getElementById("loginCard").style.display = "none";
     document.getElementById("app").style.display = "block";
@@ -423,14 +446,6 @@
 
     buildCategoryUI();
     buildMiscUI();
-
-    const ref = doc(db, "counters", currentDocId);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) {
-      await setDoc(ref, { log: [] });
-    } else {
-      await migrateIfNeeded(ref, snap.data());
-    }
 
     if (unsubscribe) unsubscribe();
     unsubscribe = onSnapshot(ref, (docSnap) => {

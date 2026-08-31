@@ -131,6 +131,11 @@ people clicking buttons occasionally won't come close to the limit.
   care about keeping.
 - **Two people, same name** — they'll only collide if they also share a
   birthday; otherwise each name+birthday pair gets its own record.
+- **"No existing pearls found" popup** — this shows up whenever the name
+  + birthday you typed doesn't match any existing account, so a typo
+  doesn't silently create a duplicate empty account. If you're sure
+  you've logged in before, check for typos (extra space, wrong birth
+  year) and cancel instead of continuing.
 - **Someone's totals look reset** — this version switched from one running
   number per category to a list of individual logged entries. Existing
   records are auto-migrated the first time they're loaded (their old
